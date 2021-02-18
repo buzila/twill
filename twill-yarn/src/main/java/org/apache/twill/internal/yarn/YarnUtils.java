@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -31,6 +30,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -72,7 +72,8 @@ public class YarnUtils {
     HADOOP_21,
     HADOOP_22,
     HADOOP_23,
-    HADOOP_26
+    HADOOP_26,
+    HADOOP_210
   }
 
   private static boolean hasDFSUtilClient = false; // use this to judge if the hadoop version is above 2.8
@@ -83,6 +84,12 @@ public class YarnUtils {
 
   private static Method cloneDelegationTokenForLogicalUriMethod;
 
+  /**
+   * When hadoop_version > 2.8.0:
+   * 1. class HAUtil has no method cloneDelegationTokenForLogicalUri(Configuration config)
+   * 2. class DFSUtils has no method getHaNnRpcAddresses(Configuration config)
+   *
+   */
   static {
     try {
       Class dfsUtilsClientClazz = Class.forName("org.apache.hadoop.hdfs.DFSUtilClient");
@@ -99,7 +106,24 @@ public class YarnUtils {
     } catch (NoSuchMethodException e) {
       LOG.debug("No such method", e);
     }
-  }
+    try {
+      if (!hasDFSUtilClient) {
+        Class dfsUtilsClazz = Class.forName("org.apache.hadoop.hdfs.DFSUtil");
+        getHaNnRpcAddressesMethod = dfsUtilsClazz.getMethod("getHaNnRpcAddresses",
+                Configuration.class);
+      }
+      if (!hasHAUtilsClient) {
+        Class haUtilClazz = Class.forName("org.apache.hadoop.hdfs.HAUtil");
+        cloneDelegationTokenForLogicalUriMethod = haUtilClazz.getMethod(
+                "cloneDelegationTokenForLogicalUri", UserGroupInformation.class,
+                URI.class, Collection.class);
+      }
+    } catch (ClassNotFoundException e) {
+      LOG.error("No such class", e);
+    } catch (NoSuchMethodException e) {
+      LOG.error("No such method", e);
+    }
+}
 
   private static final AtomicReference<HadoopVersions> HADOOP_VERSION = new AtomicReference<>();
 
@@ -204,31 +228,17 @@ public class YarnUtils {
     }
   }
 
-  /**
-   * When hadoop_version > 2.8.0, class HAUtil has no method cloneDelegationTokenForLogicalUri(Configuration config)
-   *
-   */
   private static void cloneDelegationTokenForLogicalUri(UserGroupInformation ugi, URI haUri,
                                                         Collection<InetSocketAddress> nnAddrs) {
-    if (hasHAUtilsClient) {
-      invokeStaticMethodWithExceptionHandled(cloneDelegationTokenForLogicalUriMethod, ugi, haUri, nnAddrs);
-    } else {
-      HAUtil.cloneDelegationTokenForLogicalUri(ugi, haUri, nnAddrs);
-    }
+    invokeStaticMethodWithExceptionHandled(cloneDelegationTokenForLogicalUriMethod, ugi, haUri, nnAddrs);
   }
 
 
   /**
-   * When hadoop_version > 2.8.0, class DFSUtils has no method getHaNnRpcAddresses(Configuration config)
    * @param config
    * @return
    */
   private static Map<String, Map<String, InetSocketAddress>> getHaNnRpcAddresses(Configuration config) {
-    return hasDFSUtilClient ? getHaNnRpcAddressesUseDFSUtilClient(config) :
-        DFSUtil.getHaNnRpcAddresses(config);
-  }
-
-  private static Map<String, Map<String, InetSocketAddress>> getHaNnRpcAddressesUseDFSUtilClient(Configuration config) {
     return (Map) invokeStaticMethodWithExceptionHandled(getHaNnRpcAddressesMethod, config);
   }
 
@@ -300,6 +310,11 @@ public class YarnUtils {
     if (hadoopVersion != null) {
       return hadoopVersion;
     }
+    if (VersionInfo.getVersion().startsWith("2.10")) {
+      HADOOP_VERSION.set(HadoopVersions.HADOOP_210);
+      return HADOOP_VERSION.get();
+    }
+
     try {
       Class.forName("org.apache.hadoop.yarn.client.cli.LogsCLI");
       try {

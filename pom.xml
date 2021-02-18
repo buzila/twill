@@ -29,7 +29,7 @@
 
     <groupId>org.apache.twill</groupId>
     <artifactId>twill-parent</artifactId>
-    <version>0.14.0</version>
+    <version>0.14.0-DataProc</version>
     <packaging>pom</packaging>
     <name>Apache Twill</name>
     <url>http://twill.apache.org</url>
@@ -181,6 +181,7 @@
         <jopt-simple.version>3.2</jopt-simple.version>
         <commons-compress.version>1.5</commons-compress.version>
         <force.mac.tests>false</force.mac.tests>
+        <maven.source.skip>false</maven.source.skip>
     </properties>
 
     <scm>
@@ -206,6 +207,7 @@
                     <artifactId>maven-source-plugin</artifactId>
                     <version>2.2.1</version>
                     <configuration>
+                        <skipSource>${maven.source.skip}</skipSource>
                         <excludeResources>true</excludeResources>
                     </configuration>
                     <executions>
@@ -599,6 +601,39 @@
             <properties>
                 <hadoop.version>2.6.5</hadoop.version>
             </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>1.8</version>
+                        <executions>
+                            <execution>
+                                <id>add-source</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/main/hadoop21</source>
+                                        <source>src/main/hadoop22</source>
+                                        <source>src/main/hadoop23</source>
+                                        <source>src/main/hadoop26</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>hadoop-2.10</id>
+            <properties>
+                <hadoop.version>2.10.0</hadoop.version>
+                <maven.source.skip>true</maven.source.skip>
+            </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
@@ -621,6 +656,7 @@
                                         <source>src/main/hadoop22</source>
                                         <source>src/main/hadoop23</source>
                                         <source>src/main/hadoop26</source>
+                                        <source>src/main/hadoop210</source>
                                     </sources>
                                 </configuration>
                             </execution>
