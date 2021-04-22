@@ -675,7 +675,13 @@ public final class ApplicationMasterService extends AbstractYarnTwillService imp
     // Orderly stores container requests.
     Queue<RunnableContainerRequest> requests = new ConcurrentLinkedQueue<>();
     // For each order in the twillSpec, create container request for runnables, depending on Placement policy.
+    for(String distrRunable: placementPolicyManager.getDistributedRunnables()) {
+      LOG.info("!!! distrRunable: {}", distrRunable);
+    }
     for (TwillSpecification.Order order : twillSpec.getOrders()) {
+      for(String orderName: order.getNames()) {
+        LOG.info("!!! orderName: {}", orderName);
+      }
       Set<String> distributedRunnables = Sets.intersection(placementPolicyManager.getDistributedRunnables(),
                                                            order.getNames());
       Set<String> defaultRunnables = Sets.difference(order.getNames(), distributedRunnables);
@@ -686,10 +692,13 @@ public final class ApplicationMasterService extends AbstractYarnTwillService imp
         Resource capability = createCapability(runtimeSpec.getResourceSpecification());
         for (int instanceId = 0; instanceId < runtimeSpec.getResourceSpecification().getInstances(); instanceId++) {
           AllocationSpecification allocationSpecification =
-            new AllocationSpecification(capability, AllocationSpecification.Type.ALLOCATE_ONE_INSTANCE_AT_A_TIME,
-                                        runnableName, instanceId);
+                  new AllocationSpecification(capability, AllocationSpecification.Type.ALLOCATE_ONE_INSTANCE_AT_A_TIME,
+                          runnableName, instanceId);
           addAllocationSpecification(allocationSpecification, requestsMap, runtimeSpec);
         }
+      }
+      for (String runnableName : defaultRunnables) {
+        LOG.info("!!! runnableName: {}", runnableName);
       }
       for (String runnableName : defaultRunnables) {
         LOG.info("!!! Process runable: {}", runnableName);
