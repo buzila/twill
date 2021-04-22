@@ -703,6 +703,10 @@ public final class ApplicationMasterService extends AbstractYarnTwillService imp
       for (String runnableName : defaultRunnables) {
         LOG.info("!!! Process runable: {}", runnableName);
         RuntimeSpecification runtimeSpec = twillSpec.getRunnables().get(runnableName);
+        // data.tx.enabled=false flag in cdap-site.xml exclude transaction sercvice description from twillSpec
+        // but we still have transaction in order section
+        //TODO: find how to fix it
+        if (runtimeSpec == null) continue;
         Resource capability = createCapability(runtimeSpec.getResourceSpecification());
         AllocationSpecification allocationSpecification = new AllocationSpecification(capability);
         addAllocationSpecification(allocationSpecification, requestsMap, runtimeSpec);
