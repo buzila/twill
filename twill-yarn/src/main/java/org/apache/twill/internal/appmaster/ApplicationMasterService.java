@@ -692,7 +692,7 @@ public final class ApplicationMasterService extends AbstractYarnTwillService imp
         }
       }
       for (String runnableName : defaultRunnables) {
-        LOG.info("!!! Process runable: ", runnableName);
+        LOG.info("!!! Process runable: {}", runnableName);
         RuntimeSpecification runtimeSpec = twillSpec.getRunnables().get(runnableName);
         Resource capability = createCapability(runtimeSpec.getResourceSpecification());
         AllocationSpecification allocationSpecification = new AllocationSpecification(capability);
