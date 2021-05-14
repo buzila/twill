@@ -162,6 +162,17 @@
         </mailingList>
     </mailingLists>
 
+    <distributionManagement>
+        <repository>
+            <id>cdap-releases</id>
+            <url>http://nexus-repo-cdap.ru-central1.internal:8081/repository/cdap-releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>cdap-snapshots</id>
+            <url>http://nexus-repo-cdap.ru-central1.internal:8081/repository/cdap-snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <surefire.redirectTestOutputToFile>true</surefire.redirectTestOutputToFile>
